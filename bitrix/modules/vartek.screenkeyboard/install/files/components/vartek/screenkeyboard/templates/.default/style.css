@@ -1,0 +1,109 @@
+#sk-keyboard-container {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000000;
+    background: #f8f8f8;
+    padding: 8px;
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.15);
+    user-select: none;
+    transform: translateY(100%);
+    opacity: 0;
+    transition: transform 0.25s ease-in-out, opacity 0.25s ease-in-out;
+    will-change: transform, opacity;
+}
+
+#sk-keyboard-container.sk-visible {
+    transform: translateY(0);
+    opacity: 1;
+}
+
+#sk-keyboard-container.sk-hiding {
+    transform: translateY(100%);
+    opacity: 0;
+}
+
+#sk-keyboard-container .keyboard-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 6px;
+}
+
+#sk-keyboard-container .key {
+    min-width: 62px;
+    min-height: 62px;
+    margin: 4px;
+    font-size: 22px;
+    border: none;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: transform 0.05s ease;
+}
+
+#sk-keyboard-container .key:active {
+    background: #eee;
+    transform: scale(0.95);
+    box-shadow: none;
+}
+
+#sk-keyboard-container .key.done {
+    background: #c5f5c5;
+    width: 122px;
+}
+
+#sk-keyboard-container .key.shift.active {
+    background: #b5d8ff;
+}
+
+#sk-keyboard-container .key.space {
+    width: 244px;
+}
+
+#sk-keyboard-container .key.clear {
+    background: #ffe4e4;
+    color: #b00000;
+    min-width: 110px;
+}
+
+#sk-keyboard-container .key.clear:active {
+    background: #ffc6c6;
+}
+
+#sk-keyboard-container.numeric .key {
+    min-width: 95px;
+    font-size: 26px;
+}
+
+#sk-keyboard-container.numeric .key.done {
+    background: #c5f5c5;
+    width: 200px;
+    font-size: 22px;
+}
+
+#sk-keyboard-container.numeric .key.abc {
+    font-size: 22px;
+}
+
+.catalog-page__card-counter.sk-active .catalog-page__card-counter--control {
+    display: none !important;
+}
+
+.catalog-page__card-counter.sk-active input.sk-active-counter {
+    background: #fff !important;
+    padding: 0 12px !important;
+    margin: 0 !important;
+}
+
+.catalog-page__card-counter.sk-active .catalog-page__card-counter--ok {
+    display: flex !important;
+}
+
+.sk-active-input {
+    outline: 2px solid #afcb00 !important;  /* цвет фирменного акцента */
+    box-shadow: 0 0 6px rgba(175, 203, 0, 0.6);
+    border-radius: 4px;
+    transition: box-shadow 0.15s ease, outline-color 0.15s ease;
+}

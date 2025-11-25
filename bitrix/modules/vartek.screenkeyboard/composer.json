@@ -1,0 +1,17 @@
+{
+  "name": "vartek/screenkeyboard",
+  "description": "Адаптивная экранная клавиатура для сайтов на 1С-Битрикс (Screen Keyboard).",
+  "type": "bitrix-module",
+  "version": "1.0.0",
+  "license": "proprietary",
+  "authors": [
+    {
+      "name": "Vartek",
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Vartek\\ScreenKeyboard\\": "lib/"
+    }
+  }
+}
