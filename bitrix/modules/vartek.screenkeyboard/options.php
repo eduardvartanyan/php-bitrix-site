@@ -12,4 +12,6 @@ try {
 
 $request = Application::getInstance()->getContext()->getRequest();
 
-LocalRedirect('/bitrix/admin/settings.php?mid=' . $moduleId . '&lang=' . LANGUAGE_ID);
+if ($request->get('mid') !== $moduleId) {
+    LocalRedirect('/bitrix/admin/settings.php?mid=' . $moduleId . '&lang=' . LANGUAGE_ID);
+}
