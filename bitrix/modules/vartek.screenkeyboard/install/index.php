@@ -61,8 +61,8 @@ class vartek_screenkeyboard extends CModule
     public function InstallFiles(): bool
     {
         $root = Application::getDocumentRoot();
-        CopyDirFiles(__DIR__ . '/files/components/', $root . '/local/components/', true, true);
-        CopyDirFiles(__DIR__ . '/files/js/', $root . '/local/js/', true, true);
+        CopyDirFiles(__DIR__ . '/components/', $root . '/local/components/', true, true);
+        CopyDirFiles(__DIR__ . '/js/', $root . '/local/js/', true, true);
 
         return true;
     }

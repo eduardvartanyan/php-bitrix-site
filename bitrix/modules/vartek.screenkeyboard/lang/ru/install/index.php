@@ -1,5 +1,5 @@
 <?php
-$MESS['VSK_MODULE_NAME'] = 'Экранная клавиатура (Screen Keyboard)';
+$MESS['VSK_MODULE_NAME'] = 'Экранная клавиатура';
 $MESS['VSK_MODULE_DESC'] = 'Модуль подключает адаптивную экранную клавиатуру для всех полей ввода. Поддержка раскладок (RU/EN/NUM/EMAIL)';
 
 $MESS['VSK_INSTALL_TITLE'] = 'Установка модуля «Экранная клавиатура (Screen Keyboard)»';

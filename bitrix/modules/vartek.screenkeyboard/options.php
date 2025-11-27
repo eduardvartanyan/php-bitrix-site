@@ -17,6 +17,8 @@ try {
  * @global string $REQUEST_METHOD
  **/
 
+$rights = $APPLICATION->GetGroupRight($moduleId);
+
 if ($REQUEST_METHOD === 'POST' && check_bitrix_sessid()) {
     try {
         Config::set('auto_enable', $_POST['auto_enable'] === 'Y' ? 'Y' : 'N');
@@ -76,8 +78,10 @@ $tabControl = new CAdminTabControl('tabControl', $aTabs);
         <td><?= Loc::getMessage('VSK_SETTINGS_ANIMATION') ?>:</td>
         <td><input type="checkbox" name="animation" value="Y" <?= $settings['animation'] === 'Y' ? 'checked' : '' ?>></td>
     </tr>
-    <? $tabControl->Buttons(); ?>
-    <input type="submit" name="Update" value="<?=GetMessage('MAIN_SAVE')?>" title="<?=GetMessage('MAIN_OPT_SAVE_TITLE')?>" class="adm-btn-save">
+    <? $tabControl->Buttons([
+        'disabled' => $rights<'W',
+        'back_url' => (empty($back_url) ? 'settings.php?lang=' . LANG : $back_url)
+    ]); ?>
     <?= bitrix_sessid_post() ?>
     <? $tabControl->End(); ?>
 </form>
