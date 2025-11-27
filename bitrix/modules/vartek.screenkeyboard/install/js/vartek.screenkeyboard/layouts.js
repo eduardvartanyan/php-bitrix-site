@@ -1,5 +1,4 @@
 ;(function (window, BX) {
-
     BX = BX || {};
     BX.ScreenKeyboard = BX.ScreenKeyboard || {};
 
@@ -30,5 +29,4 @@
             ['abc','done']
         ]
     };
-
 })(window, BX);

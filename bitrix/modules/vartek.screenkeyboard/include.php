@@ -1,6 +1,8 @@
 <?php
 
 use Bitrix\Main\Loader;
+use Bitrix\Main\EventManager;
+use Vartek\ScreenKeyboard\EventManager as SKEventManager;
 
 Loader::registerAutoLoadClasses(
     'vartek.screenkeyboard',
@@ -10,3 +12,7 @@ Loader::registerAutoLoadClasses(
         "Vartek\\ScreenKeyboard\\Helpers"      => 'lib/Helpers.php',
     ]
 );
+
+if (Loader::includeModule('vartek.screenkeyboard')) {
+    EventManager::getInstance()->addEventHandler('main', 'OnBeforeProlog', [SKEventManager::class, 'onBeforeProlog']);
+}

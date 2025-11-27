@@ -79,10 +79,10 @@ class vartek_screenkeyboard extends CModule
     {
         EventManager::getInstance()->registerEventHandler(
             'main',
-            'OnEndBufferContent',
+            'OnBeforeProlog',
             $this->MODULE_ID,
             "\\Vartek\\ScreenKeyboard\\EventManager",
-            'injectScript'
+            'onBeforeProlog'
         );
 
         return true;
@@ -92,10 +92,10 @@ class vartek_screenkeyboard extends CModule
     {
         EventManager::getInstance()->unRegisterEventHandler(
             'main',
-            'OnEndBufferContent',
+            'OnBeforeProlog',
             $this->MODULE_ID,
             "\\Vartek\\ScreenKeyboard\\EventManager",
-            'injectScript'
+            'onBeforeProlog'
         );
 
         return true;

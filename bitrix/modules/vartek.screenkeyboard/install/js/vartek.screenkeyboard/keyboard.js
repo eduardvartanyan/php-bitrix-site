@@ -1,10 +1,9 @@
 ;(function (window, document, BX) {
-
     BX = BX || {};
     BX.ScreenKeyboard = BX.ScreenKeyboard || {};
 
-    // Подключаем раскладки
-    const LAYOUTS = BX.ScreenKeyboard.LAYOUTS;
+    const getLayouts = () => BX.ScreenKeyboard.LAYOUTS || {};
+    const KeyboardState = BX.ScreenKeyboard.State;
 
     class SkKeyboard {
         constructor() {
@@ -30,19 +29,6 @@
                 const key = e.target.closest('button[data-key]')?.dataset.key;
                 if (key) this.handleKeyClick(key);
             });
-
-            const observer = new MutationObserver((_, obs) => {
-                const input = document.querySelector('searchbooster-search-popup')?.shadowRoot?.querySelector('input.l-ss-c-input');
-                if (input && !input.dataset.ksoBound) {
-                    this.attachInputListeners(input);
-                    obs.disconnect();
-                }
-            });
-
-            observer.observe(
-                document.querySelector('.l-ss-c-host-wrapper') || document.body,
-                { childList: true, subtree: true }
-            );
         }
 
         getLayoutForInput(el) {
@@ -62,17 +48,13 @@
             return ['INPUT', 'TEXTAREA'].includes(el.tagName);
         }
 
-        isCounterInput(input) {
-            return input?.matches?.('[data-role="tocart_input"], .buy__counter input');
-        }
-
 
 
         show() {
             if (this.visible) return;
 
             this.visible = true;
-            BX.KSO.setActive(true, this.activeInput);
+            KeyboardState?.setActive(true, this.activeInput);
             this.container.classList.add('sk-visible');
             this.container.classList.remove('sk-hiding');
 
@@ -83,7 +65,7 @@
             if (!this.visible) return;
 
             this.visible = false;
-            BX.KSO.setActive(false);
+            KeyboardState?.setActive(false);
             this.container.classList.remove('sk-visible');
             this.container.classList.add('sk-hiding');
             setTimeout(() => {
@@ -92,18 +74,6 @@
             }, 250);
 
             if (!this.activeInput) return;
-
-            const parent = this.activeInput.closest('.catalog-page__card-counter');
-            if (parent) parent.classList.remove('sk-active');
-            this.activeInput.classList.remove('sk-active-counter');
-
-            const buyCounter = this.activeInput.closest('.buy__counter');
-            if (buyCounter && buyCounter.dataset.ksoLocked) delete buyCounter.dataset.ksoLocked;
-
-            if (buyCounter) {
-                const okBtn = buyCounter.querySelector('.counter__ok');
-                if (okBtn) okBtn.click();
-            }
 
             this.triggerValidation();
 
@@ -114,7 +84,17 @@
         render() {
             this.container.classList.toggle('numeric', this.layout === 'num');
 
-            let layout = LAYOUTS[this.layout];
+            const layouts = getLayouts();
+            if (!Object.keys(layouts).length) {
+                console.error('[SkKeyboard] Layouts not ready');
+                return;
+            }
+
+            const layout = layouts[this.layout];
+            if (!layout) {
+                console.error(`[SkKeyboard] Layout "${this.layout}" not found`);
+                return;
+            }
 
             this.container.innerHTML = layout
                 .map(row => `<div class="keyboard-row">
@@ -189,26 +169,6 @@
             this.activeInput.classList.add('sk-active-input');
             this.layout = this.getLayoutForInput(e.target);
             this.show();
-
-            if (this.isCounterInput(this.activeInput)) {
-                this.activeInput.classList.add('sk-active-counter');
-
-                const parent = this.activeInput.closest('.catalog-page__card-counter');
-                if (parent) parent.classList.add('sk-active');
-
-                const buyCounter = this.activeInput.closest('.buy__counter');
-                if (buyCounter) {
-                    buyCounter.classList.add('editing');
-                    buyCounter.dataset.ksoLocked = '1';
-                }
-            } else {
-                return;
-            }
-
-            try {
-                const len = this.activeInput.value.length;
-                this.activeInput.setSelectionRange(len, len);
-            } catch (err) {}
         }
 
         handleKeyClick(key) {
@@ -233,7 +193,7 @@
                     break;
                 case 'done':
                     if (this.activeInput) {
-                        BX.KSO.setActive(false);
+                        KeyboardState?.setActive(false);
                         this.activeInput.blur();
                     }
                     this.hide();
@@ -352,28 +312,6 @@
             element.dispatchEvent(changeEvent);
         }
 
-        attachInputListeners(input) {
-            if (!input || input.dataset.ksoBound) return;
-            input.dataset.ksoBound = '1';
-
-            const root = input.getRootNode();
-            if (root && root.host && root.host.tagName === 'SEARCHBOOSTER-SEARCH-POPUP') {
-                root.addEventListener('focusin', (e) => {
-                    if (this.isInput(e.target)) {
-                        this.activeInput = e.target;
-                        this.layout = this.getLayoutForInput(e.target);
-                        this.show();
-                    }
-                });
-            } else {
-                input.addEventListener('focus', (e) => {
-                    this.activeInput = e.target;
-                    this.layout = this.getLayoutForInput(e.target);
-                    this.show();
-                });
-            }
-        }
-
         triggerValidation() {
             const input = this.activeInput;
             if (!input) return;
@@ -397,4 +335,5 @@
         }
     }
 
+    BX.ScreenKeyboard.SkKeyboard = SkKeyboard;
 })(window, document, BX);
