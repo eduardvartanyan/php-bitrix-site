@@ -3,7 +3,7 @@
 $MESS['VSK_OPT_TAB_OPTIONS'] = 'Настройки';
 
 $MESS['VSK_SETTINGS_MAIN'] = 'Основные настройки';
-$MESS['VSK_SETTINGS_AUTO_ENABLE'] = 'Включить автоподключение клавиатуры';
+$MESS['VSK_SETTINGS_AUTO_ENABLE'] = 'Включить клавиатуру';
 $MESS['VSK_SETTINGS_THEME'] = 'Тема клавиатуры';
 $MESS['VSK_SETTINGS_POSITION'] = 'Позиция клавиатуры';
 $MESS['VSK_SETTINGS_ANIMATION'] = 'Плавная анимация';
