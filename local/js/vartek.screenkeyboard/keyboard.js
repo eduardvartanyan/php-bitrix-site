@@ -450,16 +450,11 @@
 
             const type = element.type?.toLowerCase();
             if (type === 'number') {
-                // Для числовых полей событие input/ change шлем только при закрытии клавиатуры (triggerValidation),
-                // чтобы нативная логика Bitrix не дублировала символы.
                 return;
             }
 
             const event = new Event('input', { bubbles: true });
             element.dispatchEvent(event);
-
-            // change генерируется вручную в triggerValidation, чтобы не срабатывала
-            // автоматическая коррекция количества на каждой букве
         }
 
         triggerValidation() {
