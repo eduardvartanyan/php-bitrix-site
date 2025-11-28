@@ -8,22 +8,50 @@
     class SkKeyboard {
         constructor() {
             this.activeInput = null;
+            this.activeCard = null;
+            this.cardObserver = null;
             this.layout = 'ru';
             this.previousLayout = 'ru';
             this.shift = false;
             this.visible = false;
             this.container = null;
+            this.focusLock = false;
+            this.keyLock = false;
+            this.initialized = false;
         }
 
         init() {
-            this.container = document.getElementById('sk-keyboard-container');
-            if (!this.container) return console.log('SK Keyboard container not found!');
+            if (this.initialized) {
+                return;
+            }
+            this.initialized = true;
 
-            ['focusin', 'mousedown', 'touchstart'].forEach(event =>
-                document.addEventListener(event, e =>
-                    event === 'focusin' ? this.handleFocus(e) : this.handleGlobalClick(e)
-                )
-            );
+            this.container = document.getElementById('sk-keyboard-container');
+            if (!this.container) return;
+
+            document.addEventListener('focusin', (e) => this.handleFocus(e));
+            document.addEventListener('mousedown', (e) => {
+                if (this.container?.contains(e.target)) {
+                    e.preventDefault();
+                }
+                this.handleGlobalClick(e);
+            });
+            document.addEventListener('touchstart', (e) => {
+                if (this.container?.contains(e.target)) {
+                    e.preventDefault();
+                }
+                this.handleGlobalClick(e);
+            }, { passive: false });
+
+            const keyboardMouseDown = (e) => {
+                this.focusLock = true;
+                setTimeout(() => {
+                    this.focusLock = false;
+                }, 0);
+            };
+
+            this.container.addEventListener('mousedown', keyboardMouseDown);
+            this.container.addEventListener('touchstart', keyboardMouseDown, { passive: false });
 
             this.container.addEventListener('click', (e) => {
                 const key = e.target.closest('button[data-key]')?.dataset.key;
@@ -45,7 +73,66 @@
         }
 
         isInput(el) {
-            return ['INPUT', 'TEXTAREA'].includes(el.tagName);
+            return ['number', 'text', 'email'].includes(el.type)
+                || ['TEXTAREA'].includes(el.tagName);
+        }
+
+        getProductCard(element) {
+            return element?.closest?.('.product-item-container') || null;
+        }
+
+        setActiveCard(card) {
+            if (!card) {
+                this.clearActiveCard();
+                return;
+            }
+
+            if (this.activeCard === card) {
+                this.ensureActiveCardHover();
+                return;
+            }
+
+            this.clearActiveCard();
+            this.activeCard = card;
+            this.ensureActiveCardHover();
+            this.observeActiveCard();
+        }
+
+        clearActiveCard() {
+            this.disconnectCardObserver();
+            if (!this.activeCard) return;
+            this.activeCard.classList.remove('hover');
+            this.activeCard = null;
+        }
+
+        ensureActiveCardHover() {
+            if (this.activeCard && !this.activeCard.classList.contains('hover')) {
+                this.activeCard.classList.add('hover');
+            }
+        }
+
+        disconnectCardObserver() {
+            if (this.cardObserver) {
+                this.cardObserver.disconnect();
+                this.cardObserver = null;
+            }
+        }
+
+        observeActiveCard() {
+            if (typeof MutationObserver === 'undefined' || !this.activeCard) return;
+
+            this.disconnectCardObserver();
+            this.cardObserver = new MutationObserver(() => {
+                if (!this.activeCard) return;
+                if (!this.activeCard.classList.contains('hover')) {
+                    this.activeCard.classList.add('hover');
+                }
+            });
+
+            this.cardObserver.observe(this.activeCard, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
         }
 
 
@@ -139,8 +226,13 @@
 
         handleGlobalClick(e) {
             const { target } = e;
+            const targetCard = this.getProductCard(target);
+            const insideActiveCard = this.activeCard && targetCard === this.activeCard;
 
-            if (this.container?.contains(target)) return;
+            if (this.container?.contains(target)) {
+                this.ensureActiveCardHover();
+                return;
+            }
 
             if (this.isInput(target)) {
                 if (target !== this.activeInput) {
@@ -148,18 +240,31 @@
                     this.layout = this.getLayoutForInput(target);
                     this.render();
                 }
+                this.setActiveCard(targetCard);
                 this.show();
+                return;
+            }
+
+            if (insideActiveCard) {
+                this.ensureActiveCardHover();
                 return;
             }
 
             const path = e.composedPath?.() || [];
             if (path.includes(this.activeInput)) return;
 
+            this.clearActiveCard();
             if (this.visible) this.hide();
         }
 
         handleFocus(e) {
             if (!this.isInput(e.target)) return;
+            if (this.focusLock) return;
+
+            if (this.activeInput === e.target) {
+                this.ensureActiveCardHover();
+                return;
+            }
 
             document.querySelectorAll('.sk-active-input').forEach(el => {
                 el.classList.remove('sk-active-input');
@@ -168,10 +273,17 @@
             this.activeInput = e.target;
             this.activeInput.classList.add('sk-active-input');
             this.layout = this.getLayoutForInput(e.target);
+            this.setActiveCard(this.getProductCard(e.target));
             this.show();
         }
 
         handleKeyClick(key) {
+            if (this.keyLock) return;
+            this.keyLock = true;
+            setTimeout(() => {
+                this.keyLock = false;
+            }, 0);
+
             let im = this.activeInput?.inputmask || BX?.MaskedInput?.instances?.find(i => i.el === this.activeInput);
             if (im && im.opts) {
                 im.opts.clearIncomplete = false;
@@ -223,16 +335,43 @@
             }
         }
 
+        supportsSelection(input) {
+            const type = input?.type?.toLowerCase();
+            return ['text', 'search', 'password', 'url', 'tel'].includes(type);
+        }
+
+        debugInputState() {
+            if (!this.activeInput) return null;
+            return {
+                id: this.activeInput.id,
+                type: this.activeInput.type,
+                value: this.activeInput.value,
+                selectionStart: this.activeInput.selectionStart,
+                selectionEnd: this.activeInput.selectionEnd
+            };
+        }
+
         handleBackspace() {
             if (!this.activeInput) return;
 
-            this.activeInput.focus();
+            this.focusActiveInput();
 
             const start = this.activeInput.selectionStart ?? this.activeInput.value.length;
             const end = this.activeInput.selectionEnd ?? this.activeInput.value.length;
 
+            if (!this.supportsSelection(this.activeInput)) {
+                const value = this.activeInput.value;
+                this.activeInput.value = value.slice(0, -1);
+                this.dispatchInputEvent(this.activeInput);
+                return;
+            }
+
             if (start === end && start > 0) {
-                this.activeInput.setSelectionRange(start - 1, start);
+                try {
+                    this.activeInput.setSelectionRange(start - 1, start);
+                } catch (error) {
+                    return;
+                }
             }
 
             try {
@@ -249,20 +388,24 @@
         insertCharacter(char) {
             if (!this.activeInput) return;
 
-            this.activeInput.focus();
+            this.focusActiveInput();
 
             const { type } = this.activeInput;
             const value = this.activeInput.value;
-            const canSelect = ['text', 'search', 'password', 'url', 'tel'].includes(type);
+            const canSelect = this.supportsSelection(this.activeInput);
 
             try {
                 if (canSelect) {
                     const start = this.activeInput.selectionStart ?? value.length;
                     const end = this.activeInput.selectionEnd ?? value.length;
-                    this.activeInput.setSelectionRange(start, end);
-                    document.execCommand('insertText', false, char);
+                    try {
+                        this.activeInput.setSelectionRange(start, end);
+                        document.execCommand('insertText', false, char);
+                    } catch (err) {
+                        document.execCommand('insertText', false, char);
+                    }
                 } else {
-                    document.execCommand('insertText', false, char);
+                    this.activeInput.value = `${value}${char}`;
                 }
             } catch {
                 this.activeInput.value = value + char;
@@ -305,11 +448,13 @@
         dispatchInputEvent(element) {
             if (!element) return;
 
+            const type = element.type?.toLowerCase();
+            if (type === 'number') {
+                return;
+            }
+
             const event = new Event('input', { bubbles: true });
             element.dispatchEvent(event);
-
-            const changeEvent = new Event('change', { bubbles: true });
-            element.dispatchEvent(changeEvent);
         }
 
         triggerValidation() {
@@ -332,6 +477,17 @@
                     input.dispatchEvent(new Event(eventName, { bubbles: true }));
                 });
             }, 50);
+        }
+
+        focusActiveInput() {
+            if (!this.activeInput) return;
+            if (document.activeElement === this.activeInput) return;
+
+            this.focusLock = true;
+            this.activeInput.focus();
+            setTimeout(() => {
+                this.focusLock = false;
+            }, 0);
         }
     }
 
