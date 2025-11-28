@@ -12,10 +12,7 @@ class Config
     const MODULE_ID = 'vartek.screenkeyboard';
 
     protected static array $defaults = [
-        'auto_enable' => 'Y',
-        'theme'       => 'light',
-        'position'    => 'bottom',
-        'animation'   => 'Y',
+        'mode' => 'kiosk',
     ];
 
     public static function get(string $key, $default = null): string

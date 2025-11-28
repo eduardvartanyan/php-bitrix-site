@@ -21,10 +21,7 @@ $rights = $APPLICATION->GetGroupRight($moduleId);
 
 if ($REQUEST_METHOD === 'POST' && check_bitrix_sessid()) {
     try {
-        Config::set('auto_enable', $_POST['auto_enable'] === 'Y' ? 'Y' : 'N');
-        Config::set('theme', $_POST['theme']);
-        Config::set('position', $_POST['position']);
-        Config::set('animation', $_POST['animation'] === 'Y' ? 'Y' : 'N');
+        Config::set('mode', $_POST['mode']);
         LocalRedirect($APPLICATION->GetCurPage() . '?mid=' . urlencode($moduleId) . '&lang=' . urlencode(LANGUAGE_ID) . '&saved=Y');
     } catch (ArgumentOutOfRangeException $e) {
         echo '<div class="adm-info-message-wrap adm-info-message-red">
@@ -52,8 +49,14 @@ $tabControl = new CAdminTabControl('tabControl', $aTabs);
 <form method="post" action="<?= $APPLICATION->GetCurPage() ?>?mid=<?= $moduleId ?>&lang=<?= LANGUAGE_ID ?>">
     <? $tabControl->BeginNextTab(); ?>
     <tr>
-        <td width="40%"><?= Loc::getMessage('VSK_SETTINGS_AUTO_ENABLE') ?>:</td>
-        <td width="60%"><input type="checkbox" name="auto_enable" value="Y" <?= $settings['auto_enable'] === 'Y' ? 'checked' : '' ?>></td>
+        <td width="40%"><?= Loc::getMessage('VSK_SETTINGS_MODE') ?>:</td>
+        <td width="60%">
+            <select name="mode">
+                <option value="kiosk" <?= $settings['mode'] === 'only_kiosk' ? 'selected' : '' ?>><?= Loc::getMessage('VSK_MODE_KIOSK') ?></option>
+                <option value="always" <?= $settings['mode'] === 'always' ? 'selected' : '' ?>><?= Loc::getMessage('VSK_MODE_ON') ?></option>
+                <option value="off" <?= $settings['mode'] === 'off' ? 'selected' : '' ?>><?= Loc::getMessage('VSK_MODE_OFF') ?></option>
+            </select>
+        </td>
     </tr>
     <? $tabControl->Buttons([
         'disabled' => $rights<'W',

@@ -3,14 +3,21 @@
 namespace Vartek\ScreenKeyboard;
 
 use Bitrix\Main\Page\Asset;
-use Bitrix\Main\Config\Option;
 
 class EventManager
 {
     public static function onBeforeProlog()
     {
-        $enabled = Option::get('vartek.screenkeyboard', 'auto_enable', 'Y');
-        if ($enabled !== 'Y') return;
+        $mode = Config::get('mode');
+        if ($mode === 'off') return;
+
+        Asset::getInstance()->addString("
+            <script>
+                BX.message({
+                    VSK_MODE: '" . \CUtil::JSEscape($mode) . "'
+                });
+            </script>
+        ");
 
         $asset = Asset::getInstance();
 
