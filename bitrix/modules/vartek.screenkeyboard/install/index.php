@@ -33,6 +33,7 @@ class vartek_screenkeyboard extends CModule
 
         RegisterModule($this->MODULE_ID);
 
+        $this->InstallDB();
         $this->InstallFiles();
         $this->InstallEvents();
 
@@ -47,8 +48,9 @@ class vartek_screenkeyboard extends CModule
     {
         global $APPLICATION;
 
-        $this->UnInstallFiles();
         $this->UnInstallEvents();
+        $this->UnInstallFiles();
+        $this->UnInstallDB();
 
         $request = Application::getInstance()->getContext()->getRequest();
         if ($request->get('savedata') !== 'Y') Option::delete($this->MODULE_ID);
@@ -100,4 +102,15 @@ class vartek_screenkeyboard extends CModule
 
         return true;
     }
+
+    public function InstallDB(): bool
+    {
+        return true;
+    }
+
+    public function UnInstallDB(): bool
+    {
+        return true;
+    }
 }
+?>

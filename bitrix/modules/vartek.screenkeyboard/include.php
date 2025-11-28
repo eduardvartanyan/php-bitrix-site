@@ -16,3 +16,4 @@ Loader::registerAutoLoadClasses(
 if (Loader::includeModule('vartek.screenkeyboard')) {
     EventManager::getInstance()->addEventHandler('main', 'OnBeforeProlog', [SKEventManager::class, 'onBeforeProlog']);
 }
+?>
