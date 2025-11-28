@@ -29,11 +29,29 @@
             this.container = document.getElementById('sk-keyboard-container');
             if (!this.container) return;
 
-            ['focusin', 'mousedown', 'touchstart'].forEach(event =>
-                document.addEventListener(event, e =>
-                    event === 'focusin' ? this.handleFocus(e) : this.handleGlobalClick(e)
-                )
-            );
+            document.addEventListener('focusin', (e) => this.handleFocus(e));
+            document.addEventListener('mousedown', (e) => {
+                if (this.container?.contains(e.target)) {
+                    e.preventDefault();
+                }
+                this.handleGlobalClick(e);
+            });
+            document.addEventListener('touchstart', (e) => {
+                if (this.container?.contains(e.target)) {
+                    e.preventDefault();
+                }
+                this.handleGlobalClick(e);
+            }, { passive: false });
+
+            const keyboardMouseDown = (e) => {
+                this.focusLock = true;
+                setTimeout(() => {
+                    this.focusLock = false;
+                }, 0);
+            };
+
+            this.container.addEventListener('mousedown', keyboardMouseDown);
+            this.container.addEventListener('touchstart', keyboardMouseDown, { passive: false });
 
             this.container.addEventListener('click', (e) => {
                 const key = e.target.closest('button[data-key]')?.dataset.key;
