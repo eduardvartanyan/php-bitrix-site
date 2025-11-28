@@ -47,7 +47,8 @@
         }
 
         isInput(el) {
-            return ['INPUT', 'TEXTAREA'].includes(el.tagName);
+            return ['number', 'text', 'email'].includes(el.type)
+                || ['TEXTAREA'].includes(el.tagName);
         }
 
         getProductCard(element) {
