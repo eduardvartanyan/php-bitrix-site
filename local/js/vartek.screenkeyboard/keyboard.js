@@ -15,11 +15,19 @@
             this.shift = false;
             this.visible = false;
             this.container = null;
+            this.focusLock = false;
+            this.keyLock = false;
+            this.initialized = false;
         }
 
         init() {
+            if (this.initialized) {
+                return;
+            }
+            this.initialized = true;
+
             this.container = document.getElementById('sk-keyboard-container');
-            if (!this.container) return console.log('SK Keyboard container not found!');
+            if (!this.container) return;
 
             ['focusin', 'mousedown', 'touchstart'].forEach(event =>
                 document.addEventListener(event, e =>
@@ -233,6 +241,12 @@
 
         handleFocus(e) {
             if (!this.isInput(e.target)) return;
+            if (this.focusLock) return;
+
+            if (this.activeInput === e.target) {
+                this.ensureActiveCardHover();
+                return;
+            }
 
             document.querySelectorAll('.sk-active-input').forEach(el => {
                 el.classList.remove('sk-active-input');
@@ -246,6 +260,12 @@
         }
 
         handleKeyClick(key) {
+            if (this.keyLock) return;
+            this.keyLock = true;
+            setTimeout(() => {
+                this.keyLock = false;
+            }, 0);
+
             let im = this.activeInput?.inputmask || BX?.MaskedInput?.instances?.find(i => i.el === this.activeInput);
             if (im && im.opts) {
                 im.opts.clearIncomplete = false;
@@ -297,19 +317,42 @@
             }
         }
 
+        supportsSelection(input) {
+            const type = input?.type?.toLowerCase();
+            return ['text', 'search', 'password', 'url', 'tel'].includes(type);
+        }
+
+        debugInputState() {
+            if (!this.activeInput) return null;
+            return {
+                id: this.activeInput.id,
+                type: this.activeInput.type,
+                value: this.activeInput.value,
+                selectionStart: this.activeInput.selectionStart,
+                selectionEnd: this.activeInput.selectionEnd
+            };
+        }
+
         handleBackspace() {
             if (!this.activeInput) return;
 
-            this.activeInput.focus();
+            this.focusActiveInput();
 
             const start = this.activeInput.selectionStart ?? this.activeInput.value.length;
             const end = this.activeInput.selectionEnd ?? this.activeInput.value.length;
+
+            if (!this.supportsSelection(this.activeInput)) {
+                const value = this.activeInput.value;
+                this.activeInput.value = value.slice(0, -1);
+                this.dispatchInputEvent(this.activeInput);
+                return;
+            }
 
             if (start === end && start > 0) {
                 try {
                     this.activeInput.setSelectionRange(start - 1, start);
                 } catch (error) {
-                    // number inputs do not support selections
+                    return;
                 }
             }
 
@@ -327,11 +370,11 @@
         insertCharacter(char) {
             if (!this.activeInput) return;
 
-            this.activeInput.focus();
+            this.focusActiveInput();
 
             const { type } = this.activeInput;
             const value = this.activeInput.value;
-            const canSelect = ['text', 'search', 'password', 'url', 'tel', 'number'].includes(type);
+            const canSelect = this.supportsSelection(this.activeInput);
 
             try {
                 if (canSelect) {
@@ -340,11 +383,11 @@
                     try {
                         this.activeInput.setSelectionRange(start, end);
                         document.execCommand('insertText', false, char);
-                    } catch {
+                    } catch (err) {
                         document.execCommand('insertText', false, char);
                     }
                 } else {
-                    document.execCommand('insertText', false, char);
+                    this.activeInput.value = `${value}${char}`;
                 }
             } catch {
                 this.activeInput.value = value + char;
@@ -387,11 +430,18 @@
         dispatchInputEvent(element) {
             if (!element) return;
 
+            const type = element.type?.toLowerCase();
+            if (type === 'number') {
+                // Для числовых полей событие input/ change шлем только при закрытии клавиатуры (triggerValidation),
+                // чтобы нативная логика Bitrix не дублировала символы.
+                return;
+            }
+
             const event = new Event('input', { bubbles: true });
             element.dispatchEvent(event);
 
-            const changeEvent = new Event('change', { bubbles: true });
-            element.dispatchEvent(changeEvent);
+            // change генерируется вручную в triggerValidation, чтобы не срабатывала
+            // автоматическая коррекция количества на каждой букве
         }
 
         triggerValidation() {
@@ -414,6 +464,17 @@
                     input.dispatchEvent(new Event(eventName, { bubbles: true }));
                 });
             }, 50);
+        }
+
+        focusActiveInput() {
+            if (!this.activeInput) return;
+            if (document.activeElement === this.activeInput) return;
+
+            this.focusLock = true;
+            this.activeInput.focus();
+            setTimeout(() => {
+                this.focusLock = false;
+            }, 0);
         }
     }
 
