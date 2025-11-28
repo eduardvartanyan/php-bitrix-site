@@ -73,7 +73,7 @@
         }
 
         isInput(el) {
-            return ['number', 'text', 'email'].includes(el.type)
+            return ['number', 'text', 'email', 'password'].includes(el.type)
                 || ['TEXTAREA'].includes(el.tagName);
         }
 
