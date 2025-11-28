@@ -8,6 +8,8 @@
     class SkKeyboard {
         constructor() {
             this.activeInput = null;
+            this.activeCard = null;
+            this.cardObserver = null;
             this.layout = 'ru';
             this.previousLayout = 'ru';
             this.shift = false;
@@ -46,6 +48,64 @@
 
         isInput(el) {
             return ['INPUT', 'TEXTAREA'].includes(el.tagName);
+        }
+
+        getProductCard(element) {
+            return element?.closest?.('.product-item-container') || null;
+        }
+
+        setActiveCard(card) {
+            if (!card) {
+                this.clearActiveCard();
+                return;
+            }
+
+            if (this.activeCard === card) {
+                this.ensureActiveCardHover();
+                return;
+            }
+
+            this.clearActiveCard();
+            this.activeCard = card;
+            this.ensureActiveCardHover();
+            this.observeActiveCard();
+        }
+
+        clearActiveCard() {
+            this.disconnectCardObserver();
+            if (!this.activeCard) return;
+            this.activeCard.classList.remove('hover');
+            this.activeCard = null;
+        }
+
+        ensureActiveCardHover() {
+            if (this.activeCard && !this.activeCard.classList.contains('hover')) {
+                this.activeCard.classList.add('hover');
+            }
+        }
+
+        disconnectCardObserver() {
+            if (this.cardObserver) {
+                this.cardObserver.disconnect();
+                this.cardObserver = null;
+            }
+        }
+
+        observeActiveCard() {
+            if (typeof MutationObserver === 'undefined' || !this.activeCard) return;
+
+            this.disconnectCardObserver();
+            this.cardObserver = new MutationObserver(() => {
+                if (!this.activeCard) return;
+                if (!this.activeCard.classList.contains('hover')) {
+                    this.activeCard.classList.add('hover');
+                }
+            });
+
+            this.cardObserver.observe(this.activeCard, {
+                attributes: true,
+                attributeFilter: ['class']
+            });
         }
 
 
@@ -139,8 +199,13 @@
 
         handleGlobalClick(e) {
             const { target } = e;
+            const targetCard = this.getProductCard(target);
+            const insideActiveCard = this.activeCard && targetCard === this.activeCard;
 
-            if (this.container?.contains(target)) return;
+            if (this.container?.contains(target)) {
+                this.ensureActiveCardHover();
+                return;
+            }
 
             if (this.isInput(target)) {
                 if (target !== this.activeInput) {
@@ -148,13 +213,20 @@
                     this.layout = this.getLayoutForInput(target);
                     this.render();
                 }
+                this.setActiveCard(targetCard);
                 this.show();
+                return;
+            }
+
+            if (insideActiveCard) {
+                this.ensureActiveCardHover();
                 return;
             }
 
             const path = e.composedPath?.() || [];
             if (path.includes(this.activeInput)) return;
 
+            this.clearActiveCard();
             if (this.visible) this.hide();
         }
 
@@ -168,6 +240,7 @@
             this.activeInput = e.target;
             this.activeInput.classList.add('sk-active-input');
             this.layout = this.getLayoutForInput(e.target);
+            this.setActiveCard(this.getProductCard(e.target));
             this.show();
         }
 
@@ -232,7 +305,11 @@
             const end = this.activeInput.selectionEnd ?? this.activeInput.value.length;
 
             if (start === end && start > 0) {
-                this.activeInput.setSelectionRange(start - 1, start);
+                try {
+                    this.activeInput.setSelectionRange(start - 1, start);
+                } catch (error) {
+                    // number inputs do not support selections
+                }
             }
 
             try {
@@ -253,14 +330,18 @@
 
             const { type } = this.activeInput;
             const value = this.activeInput.value;
-            const canSelect = ['text', 'search', 'password', 'url', 'tel'].includes(type);
+            const canSelect = ['text', 'search', 'password', 'url', 'tel', 'number'].includes(type);
 
             try {
                 if (canSelect) {
                     const start = this.activeInput.selectionStart ?? value.length;
                     const end = this.activeInput.selectionEnd ?? value.length;
-                    this.activeInput.setSelectionRange(start, end);
-                    document.execCommand('insertText', false, char);
+                    try {
+                        this.activeInput.setSelectionRange(start, end);
+                        document.execCommand('insertText', false, char);
+                    } catch {
+                        document.execCommand('insertText', false, char);
+                    }
                 } else {
                     document.execCommand('insertText', false, char);
                 }
