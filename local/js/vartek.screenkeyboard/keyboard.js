@@ -1,0 +1,339 @@
+;(function (window, document, BX) {
+    BX = BX || {};
+    BX.ScreenKeyboard = BX.ScreenKeyboard || {};
+
+    const getLayouts = () => BX.ScreenKeyboard.LAYOUTS || {};
+    const KeyboardState = BX.ScreenKeyboard.State;
+
+    class SkKeyboard {
+        constructor() {
+            this.activeInput = null;
+            this.layout = 'ru';
+            this.previousLayout = 'ru';
+            this.shift = false;
+            this.visible = false;
+            this.container = null;
+        }
+
+        init() {
+            this.container = document.getElementById('sk-keyboard-container');
+            if (!this.container) return console.log('SK Keyboard container not found!');
+
+            ['focusin', 'mousedown', 'touchstart'].forEach(event =>
+                document.addEventListener(event, e =>
+                    event === 'focusin' ? this.handleFocus(e) : this.handleGlobalClick(e)
+                )
+            );
+
+            this.container.addEventListener('click', (e) => {
+                const key = e.target.closest('button[data-key]')?.dataset.key;
+                if (key) this.handleKeyClick(key);
+            });
+        }
+
+        getLayoutForInput(el) {
+            const type = el.type?.toLowerCase() || '';
+            const mode = el.getAttribute('inputmode')?.toLowerCase() || '';
+
+            const numericModes = ['numeric', 'tel', 'number'];
+            const emailModes   = ['email'];
+
+            if ([type, mode].some(v => numericModes.includes(v))) return 'num';
+            if ([type, mode].some(v => emailModes.includes(v))) return 'email';
+
+            return this.previousLayout;
+        }
+
+        isInput(el) {
+            return ['INPUT', 'TEXTAREA'].includes(el.tagName);
+        }
+
+
+
+        show() {
+            if (this.visible) return;
+
+            this.visible = true;
+            KeyboardState?.setActive(true, this.activeInput);
+            this.container.classList.add('sk-visible');
+            this.container.classList.remove('sk-hiding');
+
+            this.render();
+        }
+
+        hide() {
+            if (!this.visible) return;
+
+            this.visible = false;
+            KeyboardState?.setActive(false);
+            this.container.classList.remove('sk-visible');
+            this.container.classList.add('sk-hiding');
+            setTimeout(() => {
+                this.container.classList.remove('sk-hiding');
+                this.container.innerHTML = '';
+            }, 250);
+
+            if (!this.activeInput) return;
+
+            this.triggerValidation();
+
+            this.activeInput.classList.remove('sk-active-input');
+            this.activeInput = null;
+        }
+
+        render() {
+            this.container.classList.toggle('numeric', this.layout === 'num');
+
+            const layouts = getLayouts();
+            if (!Object.keys(layouts).length) {
+                console.error('[SkKeyboard] Layouts not ready');
+                return;
+            }
+
+            const layout = layouts[this.layout];
+            if (!layout) {
+                console.error(`[SkKeyboard] Layout "${this.layout}" not found`);
+                return;
+            }
+
+            this.container.innerHTML = layout
+                .map(row => `<div class="keyboard-row">
+                ${row.map(key => this.createKey(key)).join('')}
+            </div>`)
+                .join('');
+        }
+
+        createKey(key) {
+            const labels = {
+                backspace: '⌫',
+                space: 'Пробел',
+                done: 'Готово',
+                shift: '⇧',
+                dig: '123',
+                abc: 'ABC',
+                clear: 'Очистить',
+                lang: this.layout === 'ru' ? 'EN' : 'RU',
+            };
+
+            if (this.shift && this.layout !== 'num') {
+                if (key === '.') key = ',';
+                if (key === '-') key = '_';
+            }
+
+            const isDigit = /^[0-9]$/.test(key);
+            const isEmail = key === '@';
+            const label = labels[key] || (this.shift ? key.toUpperCase() : key);
+            const width = key === '.' && this.layout === 'num' ? 'style="width:95px"' : '';
+            const classes = [
+                'key',
+                key,
+                isDigit ? 'digit' : '',
+                isEmail ? 'email-key' : '',
+                key === 'shift' && this.shift ? 'active' : ''
+            ].join(' ').trim();
+
+            return `<button type="button" class="${classes}" data-key="${key}" ${width}>${label}</button>`;
+        }
+
+
+
+        handleGlobalClick(e) {
+            const { target } = e;
+
+            if (this.container?.contains(target)) return;
+
+            if (this.isInput(target)) {
+                if (target !== this.activeInput) {
+                    this.activeInput = target;
+                    this.layout = this.getLayoutForInput(target);
+                    this.render();
+                }
+                this.show();
+                return;
+            }
+
+            const path = e.composedPath?.() || [];
+            if (path.includes(this.activeInput)) return;
+
+            if (this.visible) this.hide();
+        }
+
+        handleFocus(e) {
+            if (!this.isInput(e.target)) return;
+
+            document.querySelectorAll('.sk-active-input').forEach(el => {
+                el.classList.remove('sk-active-input');
+            });
+
+            this.activeInput = e.target;
+            this.activeInput.classList.add('sk-active-input');
+            this.layout = this.getLayoutForInput(e.target);
+            this.show();
+        }
+
+        handleKeyClick(key) {
+            let im = this.activeInput?.inputmask || BX?.MaskedInput?.instances?.find(i => i.el === this.activeInput);
+            if (im && im.opts) {
+                im.opts.clearIncomplete = false;
+                im.opts.clearMaskOnLostFocus = false;
+            } else {
+                const originalInput = this.activeInput?.oninput;
+                if (this.activeInput.oninput) {
+                    this.activeInput.oninput = null;
+                    setTimeout(() => this.activeInput.oninput = originalInput, 50);
+                }
+            }
+
+            switch (key) {
+                case 'backspace':
+                    this.handleBackspace();
+                    break;
+                case 'space':
+                    this.insertCharacter(' ');
+                    break;
+                case 'done':
+                    if (this.activeInput) {
+                        KeyboardState?.setActive(false);
+                        this.activeInput.blur();
+                    }
+                    this.hide();
+                    break;
+                case 'lang':
+                    this.toggleLanguage();
+                    break;
+                case 'shift':
+                    this.toggleShift();
+                    break;
+                case 'dig':
+                    this.toggleLayout('num');
+                    break;
+                case 'abc':
+                    this.toggleLayout(this.previousLayout !== 'num' ? this.previousLayout : 'ru');
+                    break;
+                case 'clear':
+                    if (this.activeInput) {
+                        this.activeInput.value = '';
+                        this.dispatchInputEvent(this.activeInput);
+                    }
+                    break;
+                default:
+                    const value = this.shift ? key.toUpperCase() : key;
+                    this.insertCharacter(value);
+                    break;
+            }
+        }
+
+        handleBackspace() {
+            if (!this.activeInput) return;
+
+            this.activeInput.focus();
+
+            const start = this.activeInput.selectionStart ?? this.activeInput.value.length;
+            const end = this.activeInput.selectionEnd ?? this.activeInput.value.length;
+
+            if (start === end && start > 0) {
+                this.activeInput.setSelectionRange(start - 1, start);
+            }
+
+            try {
+                document.execCommand('delete');
+            } catch (e) {
+                const val = this.activeInput.value;
+                this.activeInput.value = val.slice(0, Math.max(0, start - 1)) + val.slice(end);
+                this.activeInput.selectionStart = this.activeInput.selectionEnd = Math.max(0, start - 1);
+            }
+
+            this.dispatchInputEvent(this.activeInput);
+        }
+
+        insertCharacter(char) {
+            if (!this.activeInput) return;
+
+            this.activeInput.focus();
+
+            const { type } = this.activeInput;
+            const value = this.activeInput.value;
+            const canSelect = ['text', 'search', 'password', 'url', 'tel'].includes(type);
+
+            try {
+                if (canSelect) {
+                    const start = this.activeInput.selectionStart ?? value.length;
+                    const end = this.activeInput.selectionEnd ?? value.length;
+                    this.activeInput.setSelectionRange(start, end);
+                    document.execCommand('insertText', false, char);
+                } else {
+                    document.execCommand('insertText', false, char);
+                }
+            } catch {
+                this.activeInput.value = value + char;
+            }
+
+            this.dispatchInputEvent(this.activeInput);
+
+            if (this.shift) {
+                this.shift = false;
+                this.render();
+            }
+        }
+
+
+
+        toggleLanguage() {
+            this.layout = this.layout === 'ru' ? 'en' : 'ru';
+            this.previousLayout = this.layout;
+            this.render();
+        }
+
+        toggleLayout(layout) {
+            if (!layout) return;
+
+            if (this.layout !== 'num' && this.layout !== 'email') {
+                this.previousLayout = this.layout;
+            }
+            this.layout = layout;
+
+            this.render();
+        }
+
+        toggleShift() {
+            this.shift = !this.shift;
+            this.render();
+        }
+
+
+
+        dispatchInputEvent(element) {
+            if (!element) return;
+
+            const event = new Event('input', { bubbles: true });
+            element.dispatchEvent(event);
+
+            const changeEvent = new Event('change', { bubbles: true });
+            element.dispatchEvent(changeEvent);
+        }
+
+        triggerValidation() {
+            const input = this.activeInput;
+            if (!input) return;
+
+            input.value = String(input.value ?? '');
+
+            const im = input.inputmask ||
+                (window.Inputmask?.get ? window.Inputmask.get(input) : null) ||
+                BX?.MaskedInput?.instances?.find(i => i.el === input);
+
+            if (im?.isComplete && !im.isComplete()) {
+                input.value = '';
+                im.mask?.(input);
+            }
+
+            setTimeout(() => {
+                ['input', 'change', 'blur'].forEach(eventName => {
+                    input.dispatchEvent(new Event(eventName, { bubbles: true }));
+                });
+            }, 50);
+        }
+    }
+
+    BX.ScreenKeyboard.SkKeyboard = SkKeyboard;
+})(window, document, BX);
