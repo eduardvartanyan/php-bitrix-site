@@ -19,6 +19,6 @@ class EventManager
         $asset->addJs('/local/js/vartek.screenkeyboard/state.js');
         $asset->addJs('/local/js/vartek.screenkeyboard/sk.init.js');
 
-        $asset->addCss('/local/components/vartek/screenkeyboard/templates/.default/style.css');
+        $asset->addCss('/local/js/vartek.screenkeyboard/style.css');
     }
 }
