@@ -13,8 +13,6 @@ class vartek_screenkeyboard extends CModule
     public $MODULE_VERSION;
     public $MODULE_VERSION_DATE;
     public $MODULE_NAME;
-    public $PARTNER_NAME = "Vartek";
-    public $PARTNER_URI  = "";
 
     public function __construct()
     {
@@ -25,6 +23,8 @@ class vartek_screenkeyboard extends CModule
         $this->MODULE_VERSION_DATE = $arModuleVersion['VERSION_DATE'];
         $this->MODULE_NAME         = Loc::getMessage('VSK_MODULE_NAME');
         $this->MODULE_DESCRIPTION  = Loc::getMessage('VSK_MODULE_DESC');
+        $this->PARTNER_NAME        = "Vartek";
+        $this->PARTNER_URI         = "https://ipvartnyan.ru";
     }
 
     public function DoInstall(): void
